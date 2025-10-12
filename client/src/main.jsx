@@ -6,6 +6,7 @@ import App from './App.jsx'
 import Login from './Login.jsx'
 import Register from './Register.jsx'
 import Landing from './Landing.jsx'
+import OAuthSuccess from './OAuthSuccess.jsx'
 import './index.css'
 
 // Protected Route Component
@@ -48,6 +49,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <AuthProvider>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/oauth-success" element={<OAuthSuccess />} />
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <App />

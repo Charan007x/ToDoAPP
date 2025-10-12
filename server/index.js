@@ -1,12 +1,35 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const session = require('express-session');
+require('dotenv').config();
+
+// IMPORTANT: Load passport AFTER dotenv
+const passport = require('./config/passport');
 
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true
+}));
 app.use(express.json());
+
+// Session middleware (required for Passport)
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-session-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false, // Set to true in production with HTTPS
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 // MongoDB Connection
 mongoose.connect('mongodb://localhost:27017/todo-app', {
@@ -42,6 +65,10 @@ const Todo = mongoose.model('Todo', todoSchema);
 // Auth Routes
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
+
+// OAuth Routes
+const oauthRoutes = require('./routes/oauth');
+app.use('/api/auth', oauthRoutes);
 
 // Auth Middleware
 const auth = require('./middleware/auth');
