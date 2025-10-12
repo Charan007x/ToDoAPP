@@ -13,7 +13,7 @@ router.get('/google', passport.authenticate('google', {
 // @desc    Google callback route
 router.get('/google/callback',
   passport.authenticate('google', { 
-    failureRedirect: 'http://localhost:3000/login',
+    failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:3000'}/login`,
     session: false 
   }),
   (req, res) => {
@@ -25,7 +25,8 @@ router.get('/google/callback',
     );
 
     // Redirect to frontend with token
-    res.redirect(`http://localhost:3000/oauth-success?token=${token}`);
+    const clientURL = process.env.CLIENT_URL || 'http://localhost:3000';
+    res.redirect(`${clientURL}/oauth-success?token=${token}`);
   }
 );
 

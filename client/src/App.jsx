@@ -4,6 +4,9 @@ import { useAuth } from './AuthContext';
 import Navbar from './Navbar';
 import './App.css';
 
+// API URL from environment variable or default to localhost
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 function App() {
   const [todos, setTodos] = useState([]);
   const [newTodo, setNewTodo] = useState('');
@@ -20,7 +23,7 @@ function App() {
 
   const fetchTodos = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/todos', {
+      const response = await fetch(`${API_URL}/api/todos`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -42,7 +45,7 @@ function App() {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/todos', {
+      const response = await fetch(`${API_URL}/api/todos`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -62,7 +65,7 @@ function App() {
 
   const toggleTodo = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/todos/${id}`, {
+      const response = await fetch(`${API_URL}/api/todos/${id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -81,7 +84,7 @@ function App() {
     if (!window.confirm('Are you sure you want to delete this todo?')) return;
     
     try {
-      await fetch(`http://localhost:5000/api/todos/${id}`, {
+      await fetch(`${API_URL}/api/todos/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

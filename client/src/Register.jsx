@@ -4,6 +4,8 @@ import { useAuth } from './AuthContext';
 import Navbar from './Navbar';
 import './Auth.css';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -122,7 +124,7 @@ function Register() {
         </div>
 
         <button 
-          onClick={() => window.location.href = 'http://localhost:5000/api/auth/google'}
+          onClick={() => window.location.href = `${API_URL}/api/auth/google`}
           className="google-button"
         >
           <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
