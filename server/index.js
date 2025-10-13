@@ -9,6 +9,11 @@ const passport = require('./config/passport');
 
 const app = express();
 
+// If running behind a proxy (Render, Heroku, etc.) trust first proxy
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Middleware
 app.use(cors({
   origin: process.env.CLIENT_URL || ['http://localhost:3000', 'http://localhost:3001'],
@@ -23,9 +28,17 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production', // true in production with HTTPS
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    // allow cookie to be transmitted in cross-site requests when in production
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
+
+// when behind a proxy, express-session needs proxy=true to correctly
+// set secure cookies. Some deployments require this option to be true.
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 // Initialize Passport
 app.use(passport.initialize());
