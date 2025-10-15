@@ -44,6 +44,20 @@ function App() {
     if (!newTodo.trim()) return;
 
     setLoading(true);
+    
+    // Create temporary ID for optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const optimisticTodo = {
+      _id: tempId,
+      text: newTodo,
+      completed: false,
+      _saving: true
+    };
+    
+    // Optimistic update - add to UI immediately
+    setTodos([optimisticTodo, ...todos]);
+    setNewTodo('');
+    
     try {
       const response = await fetch(`${API_URL}/api/todos`, {
         method: 'POST',
@@ -51,19 +65,42 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ text: newTodo }),
+        body: JSON.stringify({ text: optimisticTodo.text }),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to add todo');
+      }
+
       const todo = await response.json();
-      setTodos([todo, ...todos]);
-      setNewTodo('');
+      
+      // Replace temp todo with real one from server
+      setTodos(prev => prev.map(t => 
+        t._id === tempId ? { ...todo, _saving: false } : t
+      ));
     } catch (error) {
       console.error('Error adding todo:', error);
-      alert('Error adding todo!');
+      
+      // Remove temp todo on error
+      setTodos(prev => prev.filter(t => t._id !== tempId));
+      setNewTodo(optimisticTodo.text); // Restore text
+      alert('Failed to add todo. Please try again.');
     }
+    
     setLoading(false);
   };
 
   const toggleTodo = async (id) => {
+    // Find the todo we're toggling
+    const todo = todos.find(t => t._id === id);
+    if (!todo) return;
+
+    // Optimistic update - update UI immediately
+    const optimisticTodos = todos.map(t => 
+      t._id === id ? { ...t, completed: !t.completed, _saving: true } : t
+    );
+    setTodos(optimisticTodos);
+
     try {
       const response = await fetch(`${API_URL}/api/todos/${id}`, {
         method: 'PUT',
@@ -71,28 +108,55 @@ function App() {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to update todo');
+      }
+
       const updatedTodo = await response.json();
-      setTodos(todos.map(todo => 
-        todo._id === id ? updatedTodo : todo
+      
+      // Update with server response and remove saving flag
+      setTodos(prev => prev.map(t => 
+        t._id === id ? { ...updatedTodo, _saving: false } : t
       ));
     } catch (error) {
       console.error('Error toggling todo:', error);
+      
+      // Rollback on error - revert to original state
+      setTodos(prev => prev.map(t => 
+        t._id === id ? { ...todo, _saving: false } : t
+      ));
+      
+      alert('Failed to update todo. Please try again.');
     }
   };
 
   const deleteTodo = async (id) => {
     if (!window.confirm('Are you sure you want to delete this todo?')) return;
     
+    // Store original todos for rollback
+    const originalTodos = [...todos];
+    
+    // Optimistic delete - remove from UI immediately
+    setTodos(todos.filter(todo => todo._id !== id));
+    
     try {
-      await fetch(`${API_URL}/api/todos/${id}`, {
+      const response = await fetch(`${API_URL}/api/todos/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      setTodos(todos.filter(todo => todo._id !== id));
+
+      if (!response.ok) {
+        throw new Error('Failed to delete todo');
+      }
     } catch (error) {
       console.error('Error deleting todo:', error);
+      
+      // Rollback on error
+      setTodos(originalTodos);
+      alert('Failed to delete todo. Please try again.');
     }
   };
 
@@ -144,13 +208,18 @@ function App() {
                     type="checkbox"
                     checked={todo.completed}
                     onChange={() => toggleTodo(todo._id)}
+                    disabled={todo._saving}
                   />
-                  <span className="todo-text">{todo.text}</span>
+                  <span className="todo-text">
+                    {todo.text}
+                    {todo._saving && <span className="saving-indicator"> ⏳</span>}
+                  </span>
                 </div>
                 <button 
                   onClick={() => deleteTodo(todo._id)} 
                   className="delete-btn"
                   title="Delete todo"
+                  disabled={todo._saving}
                 >
                   🗑️
                 </button>

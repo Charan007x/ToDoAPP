@@ -111,15 +111,49 @@ app.post('/api/todos', auth, async (req, res) => {
   }
 });
 
-// Toggle todo completion
+// Toggle todo completion (optimized)
 app.put('/api/todos/:id', auth, async (req, res) => {
   try {
-    const todo = await Todo.findOne({ _id: req.params.id, owner: req.userId });
-    if (!todo) {
+    // First find the todo to check current state
+    const currentTodo = await Todo.findOne({ _id: req.params.id, owner: req.userId }).lean();
+    if (!currentTodo) {
       return res.status(404).json({ message: 'Todo not found' });
     }
-    todo.completed = !todo.completed;
-    const updatedTodo = await todo.save();
+    
+    // Use findByIdAndUpdate for better performance
+    const updatedTodo = await Todo.findOneAndUpdate(
+      { _id: req.params.id, owner: req.userId },
+      { $set: { completed: !currentTodo.completed } },
+      { new: true, lean: true }
+    );
+    
+    res.json(updatedTodo);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// PATCH endpoint for partial updates (faster)
+app.patch('/api/todos/:id', auth, async (req, res) => {
+  try {
+    const updates = {};
+    if (typeof req.body.completed !== 'undefined') {
+      updates.completed = req.body.completed;
+    }
+    if (req.body.text) {
+      updates.text = req.body.text;
+    }
+
+    const updatedTodo = await Todo.findOneAndUpdate(
+      { _id: req.params.id, owner: req.userId },
+      { $set: updates },
+      { new: true, lean: true }
+    );
+
+    if (!updatedTodo) {
+      return res.status(404).json({ message: 'Todo not found' });
+    }
+
     res.json(updatedTodo);
   } catch (error) {
     res.status(400).json({ message: error.message });
